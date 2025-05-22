@@ -323,9 +323,9 @@ CREATE TABLE `d_guard_workstations` (
 
 CREATE TABLE `neppo_satisfaction_surveys` (
     `id` INT NOT NULL AUTO_INCREMENT,
-    `service_order_number` INT NOT NULL UNIQUE,
-    `csid` INT NOT NULL,
-    `phone` INT NOT NULL,
+    `service_order_number` VARCHAR(255) NOT NULL UNIQUE,
+    `csid` VARCHAR(255) NOT NULL,
+    `phone` VARCHAR(255) NOT NULL,
     `status` VARCHAR(255) NOT NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
