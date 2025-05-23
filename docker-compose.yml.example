@@ -14,7 +14,7 @@ services:
       dockerfile: Dockerfile
       target: development
     ports:
-      - "3043:3043"
+      - "3042:3042"
     volumes:
       - .:/app:delegated
       - /app/node_modules/
@@ -30,7 +30,7 @@ services:
       dockerfile: Dockerfile
       target: production
     ports:
-      - "3043:3043"
+      - "3042:3042"
     env_file: .env
     depends_on:
       - db

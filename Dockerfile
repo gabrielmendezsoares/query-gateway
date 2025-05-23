@@ -22,7 +22,7 @@ COPY --chown=nodeuser:nodejs . .
 
 ENV NODE_ENV=development
 
-EXPOSE 3043
+EXPOSE 3042
 
 CMD ["npm", "run", "start:development"]
 
@@ -45,6 +45,6 @@ COPY --from=builder --chown=nodeuser:nodejs /app/dist ./dist
 
 ENV NODE_ENV=production
 
-EXPOSE 3043
+EXPOSE 3042
 
 CMD ["npm", "run", "start:production"]
