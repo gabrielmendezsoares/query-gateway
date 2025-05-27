@@ -308,27 +308,9 @@ model users {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model neppo_satisfaction_surveys {
   id                   Int      @id @default(autoincrement())
-  service_order_number Int      @unique(map: "service_order_number")
-  csid                 Int
-  phone                Int
-  status               String   @db.VarChar(255)
-  created_at           DateTime @default(now()) @db.DateTime(0)
-  updated_at           DateTime @default(now()) @db.DateTime(0)
-
-  @@index([created_at], map: "idx_created_at")
-  @@index([csid], map: "idx_csid")
-  @@index([phone], map: "idx_phone")
-  @@index([service_order_number], map: "idx_service_order_number")
-  @@index([status], map: "idx_status")
-  @@index([updated_at], map: "idx_updated_at")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model neppo_satisfying_surveys {
-  id                   Int      @id @default(autoincrement())
-  service_order_number Int      @unique(map: "service_order_number")
-  csid                 Int
-  phone                Int
+  service_order_number String   @unique(map: "service_order_number") @db.VarChar(255)
+  csid                 String   @db.VarChar(255)
+  phone                String   @db.VarChar(255)
   status               String   @db.VarChar(255)
   created_at           DateTime @default(now()) @db.DateTime(0)
   updated_at           DateTime @default(now()) @db.DateTime(0)
