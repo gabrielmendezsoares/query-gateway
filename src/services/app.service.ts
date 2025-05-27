@@ -19,14 +19,14 @@ export const getHealth = async (
       query: req.query,
       headers: req.headers,
       body: req.body,
-      data: {
+      monitor: {
         cpuUsage: {
           name: 'Uso de CPU',
-          value: `${ await osu.cpu.usage() }%`
+          value: `${ (await osu.cpu.usage()).toFixed(1) }%`
         },
         memoryUsage: {
           name: 'Uso de memória',
-          value: `${ (await osu.mem.used()).usedMemMb }MB`
+          value: `${ (await osu.mem.used()).usedMemMb.toFixed(1) }MB`
         }
       }
     }
