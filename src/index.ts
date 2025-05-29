@@ -44,7 +44,6 @@ const buildServer = async (): Promise<void> => {
     const serverInstance = await createServer(app);
 
     appRoute.buildRoutes();
-    
     startServer(serverInstance as Express);
   } catch (error: unknown) {
     console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: ${ error instanceof Error ? error.message : String(error) }`);

@@ -9,13 +9,14 @@
  * 
  * Each property plays a specific role:
  * 
- * - method: Defines the HTTP method (GET, POST, etc.)
- * - version: Specifies the API version for URL construction
- * - url: Defines the endpoint path (excluding version prefix)
- * - serviceHandler: References the function containing the endpoint's business logic
- * - requiresAuthorization: Controls whether authentication is required
- * - roleList: Specifies permitted user roles for authorization
- * - middlewareHandlerList: Defines additional processing middleware
+ * - method: HTTP method definition
+ * - version: Version definition
+ * - url: URL path definition
+ * - serviceHandler: Service handler binding
+ * - requiresAuthorization: Authorization handling
+ * - dynamicSegmentList: Dynamic segment definition
+ * - roleList: Role-based access control
+ * - middlewareHandlerList: Middleware handler binding
  * 
  * This structure enables declarative route definitions that are both maintainable
  * and self-documenting.
@@ -26,6 +27,7 @@ export interface IRouteMap {
   url: string,
   serviceHandler: Function,
   requiresAuthorization?: boolean
+  dynamicSegmentList?: string[],
   roleList?: string[],
   middlewareHandlerList?: Function[],
 };
