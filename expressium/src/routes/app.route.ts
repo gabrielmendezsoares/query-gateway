@@ -30,24 +30,28 @@ export const router = Router();
  * @description Creates and registers API routes using a standardized configuration object.
  * This function handles:
  * 
- * - API version validation
- * - Route path construction with version prefixing
- * - Authorization middleware application
+ * - HTTP method definition
+ * - Version definition
+ * - URL path definition
+ * - Service handler binding
+ * - Authorization handling
+ * - Dynamic segment definition
  * - Role-based access control
- * - Custom middleware integration
- * - Controller wrapping for service handlers
+ * - Middleware handler binding
  * 
- * The function builds routes following the pattern /<version>/<url> and applies
- * middleware in the correct sequence based on configuration.
+ * Middleware ordering is preserved, to ensure that authorization and other
+ * middleware functions are executed in the correct sequence before
+ * the service handler is invoked.
  * 
- * @param routeMap - Complete route configuration object with the following properties:
- * @param routeMap.method - HTTP method (get, post, put, delete, etc.).
- * @param routeMap.version - API version identifier (e.g., 'v1', 'v2').
- * @param routeMap.url - Endpoint path excluding version prefix.
+ * @param routeMap - Configuration object defining the route.
+ * @param routeMap.method - HTTP method (e.g., 'get', 'post', etc.).
+ * @param routeMap.version - Version (e.g., 'v1', 'v2', etc.).
+ * @param routeMap.url - URL path.
  * @param routeMap.serviceHandler - Business logic function.
  * @param routeMap.requiresAuthorization - Whether authorization is required (default: true).
- * @param routeMap.roleList - User roles allowed to access this route.
- * @param routeMap.middlewareHandlerList - Additional middleware functions.
+ * @param routeMap.dynamicSegmentList - List of dynamic segments in the URL.
+ * @param routeMap.roleList - List of roles allowed to access the route (optional).
+ * @param routeMap.middlewareHandlerList - List of middleware functions to apply to the route (optional).
  */
 export const generateRoute = (
   { 
@@ -56,8 +60,9 @@ export const generateRoute = (
     url,
     serviceHandler, 
     requiresAuthorization = true,
+    dynamicSegmentList = [],
     roleList,
-    middlewareHandlerList = [], 
+    middlewareHandlerList = []
   }: IRouteMap.IRouteMap
 ): void => {
   if (!VERSION_REGEX.test(version)) {
@@ -75,9 +80,9 @@ export const generateRoute = (
       return appMiddleware.getAuthorization(req, res, next, roleList);
     };
 
-    (router as any)[method](`/${ version }/${ url }`, getAuthorization, ...middlewareHandlerList, appController.generateController(serviceHandler));
+    (router as any)[method](`/${ version }/${ url }/${ dynamicSegmentList.map((dynamicSegment: string): string => `:${ dynamicSegment }`).join('/') }`, getAuthorization, ...middlewareHandlerList, appController.generateController(serviceHandler));
   } else {
-    (router as any)[method](`/${ version }/${ url }`, ...middlewareHandlerList, appController.generateController(serviceHandler));
+    (router as any)[method](`/${ version }/${ url }/${ dynamicSegmentList.map((dynamicSegment: string): string => `:${ dynamicSegment }`).join('/') }`, ...middlewareHandlerList, appController.generateController(serviceHandler));
   }
 };
 
