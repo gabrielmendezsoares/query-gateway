@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response, Router } from 'express';
+import momentTimezone from 'moment-timezone';
 import { appController } from '../controllers/index.js';
 import { IResponse, IResponseData } from '../interfaces/index.js';
 import { IRouteMap } from './interfaces/index.js';
 import { appMiddleware } from '../middlewares/index.js';
 import { appService } from '../services/index.js';
-import { dateTimeFormatterUtil } from '../utils/index.js';
 
 const VERSION_REGEX = /^v[0-9]+$/;
 
@@ -45,11 +45,11 @@ export const router = Router();
  * 
  * @param routeMap - Configuration object defining the route.
  * @param routeMap.method - HTTP method (e.g., 'get', 'post', etc.).
- * @param routeMap.version - Version (e.g., 'v1', 'v2', etc.).
+ * @param routeMap.version - Version (e.g., 'v1', 'v2', etc.) (optional).
  * @param routeMap.url - URL path.
  * @param routeMap.serviceHandler - Business logic function.
  * @param routeMap.requiresAuthorization - Whether authorization is required (default: true).
- * @param routeMap.dynamicSegmentList - List of dynamic segments in the URL.
+ * @param routeMap.dynamicSegmentList - List of dynamic segments in the URL (optional).
  * @param routeMap.roleList - List of roles allowed to access the route (optional).
  * @param routeMap.middlewareHandlerList - List of middleware functions to apply to the route (optional).
  */
@@ -65,8 +65,8 @@ export const generateRoute = (
     middlewareHandlerList = []
   }: IRouteMap.IRouteMap
 ): void => {
-  if (!VERSION_REGEX.test(version)) {
-    console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: Invalid API version - ${ version }`);
+  if (version && !VERSION_REGEX.test(version)) {
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/routes/app.route.ts | Location: generateRoute | Error: Invalid API version - ${ version }`);
 
     return;
   }
@@ -79,10 +79,10 @@ export const generateRoute = (
     ): Promise<IResponse.IResponse<IResponseData.IResponseData> | void> => {
       return appMiddleware.getAuthorization(req, res, next, roleList);
     };
-
-    (router as any)[method](`/${ version }/${ url }/${ dynamicSegmentList.map((dynamicSegment: string): string => `:${ dynamicSegment }`).join('/') }`, getAuthorization, ...middlewareHandlerList, appController.generateController(serviceHandler));
+    
+    (router as any)[method](`${ version ? `/${ version }` : '' }/${ url }/${ dynamicSegmentList.map((dynamicSegment: string): string => `:${ dynamicSegment }`).join('/') }`, getAuthorization, ...middlewareHandlerList, appController.generateController(serviceHandler));
   } else {
-    (router as any)[method](`/${ version }/${ url }/${ dynamicSegmentList.map((dynamicSegment: string): string => `:${ dynamicSegment }`).join('/') }`, ...middlewareHandlerList, appController.generateController(serviceHandler));
+    (router as any)[method](`${ version ? `/${ version }` : '' }/${ url }/${ dynamicSegmentList.map((dynamicSegment: string): string => `:${ dynamicSegment }`).join('/') }`, ...middlewareHandlerList, appController.generateController(serviceHandler));
   }
 };
 

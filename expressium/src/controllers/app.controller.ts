@@ -1,6 +1,6 @@
 import { NextFunction, Request, RequestHandler, Response } from 'express';
+import momentTimezone from 'moment-timezone';
 import { v4 } from 'uuid';
-import { dateTimeFormatterUtil } from '../utils/index.js';
 
 /**
  * ## generateController
@@ -61,8 +61,8 @@ export const generateController = (serviceHandler: Function): RequestHandler => 
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const timestamp = dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate());
-    const timer = `Controller | Timestamp: ${ timestamp } | Name: generateController | Service Name: ${ serviceHandler.name } ${ v4() }`;
+    const timestamp = momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss');
+    const timer = `Application | Timestamp: ${ timestamp } | UUID: ${ v4() }`;
     
     console.time(timer);
     
@@ -71,7 +71,7 @@ export const generateController = (serviceHandler: Function): RequestHandler => 
       
       res.status(status).json(data);
     } catch (error: unknown) {
-      console.log(`Controller | Timestamp: ${ timestamp } | Name: generateController | Error: ${ error instanceof Error ? error.message : String(error) }`);
+      console.log(`Error | Timestamp: ${ timestamp } | Path: expressium/src/controllers/app.controller.ts | Location: generateController | Error: ${ error instanceof Error ? error.message : String(error) }`);
       
       res
         .status(500)

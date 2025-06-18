@@ -6,7 +6,8 @@ export interface ISuccessQueryData {
   groupName?: string;
   databasesId: number;
   sql: string;
-  parameterMap?: JSON;
+  variableMap?: JSON;
+  replacementMap?: JSON;
   isQueryActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -21,7 +22,8 @@ export interface IErrorQueryData {
   groupName?: string;
   databasesId: number;
   sql: string;
-  parameterMap?: JSON;
+  variableMap?: JSON;
+  replacementMap?: JSON;
   isQueryActive: boolean;
   createdAt: string;
   updatedAt: string;

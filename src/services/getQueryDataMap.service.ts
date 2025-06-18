@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
+import momentTimezone from 'moment-timezone';
 import OracleDB from 'oracledb';
 import { QueryTypes, Sequelize, Transaction } from 'sequelize';
 import { PrismaClient } from '@prisma/client/storage/client.js';
-import { cryptographyUtil, dateTimeFormatterUtil } from '../../expressium/src/index.js';
+import { cryptographyUtil } from '../../expressium/src/index.js';
 import { IQuery, IQueryData, IReqBody, IResponse, IResponseData } from '../interfaces/index.js';
 
 const prisma = new PrismaClient();
@@ -43,7 +44,8 @@ const processQueryData = async (
     group_name,
     databases_id,
     sql,
-    parameter_map,
+    variable_map,
+    replacement_map,
     is_query_active,
     created_at,
     updated_at
@@ -51,8 +53,11 @@ const processQueryData = async (
 
   const parameterMap = { 
     sql: sql,
-    parameterMap: extractParameter<JSON | undefined>(req, name, 'parameter_map', parameter_map)
+    variableMap: extractParameter<JSON | undefined>(req, name, 'variable_map', variable_map),
+    replacementMap: extractParameter<JSON | undefined>(req, name, 'replacement_map', replacement_map)
   };
+
+  let sequelizeInstance: Sequelize | undefined;
 
   try {
     const database = await prisma.databases.findUnique({ where: { id: databases_id } });
@@ -68,7 +73,8 @@ const processQueryData = async (
           groupName: group_name !== null ? group_name : undefined,
           databasesId: databases_id,
           sql: parameterMap.sql,
-          parameterMap: parameterMap.parameterMap,
+          variableMap: parameterMap.variableMap,
+          replacementMap: parameterMap.replacementMap,
           isQueryActive: is_query_active,
           createdAt: created_at,
           updatedAt: updated_at,
@@ -77,8 +83,6 @@ const processQueryData = async (
         }
       ];
     }
-
-    let sequelizeInstance: Sequelize | undefined;
 
     switch (database.database_type) {
       case 'Oracle':
@@ -103,7 +107,10 @@ const processQueryData = async (
                 process.env.DATABASES_CONNECT_STRING_IV_STRING as string, 
                 new TextDecoder().decode(database.connect_string as Uint8Array)
               ),
-              options: { encrypt: false }
+              options: { 
+                encrypt: false,
+                requestTimeout: 30_000
+              }
             },
             define: { freezeTableName: true }
           }
@@ -112,19 +119,21 @@ const processQueryData = async (
         break;
 
       case 'SQL Server':
-        if (parameterMap.parameterMap) {
-          const parameterDeclaration = Object.entries(parameterMap.parameterMap).reduce(
-            (accumulator: string, [key, value]: [string, { dataType: string, value: any }]): string => {
-              if (Object.isObject(value) && Object.isString(value.dataType)) {
-                accumulator += `DECLARE @${ key } ${ value.dataType } = ${ Object.isString(value.value) ? "'" : '' }${ value.value }${ Object.isString(value.value) ? "'" : '' }; `;
-              }
+        if (parameterMap.variableMap) {
+          const variableDeclaration = Object
+            .entries(parameterMap.variableMap)
+            .reduce(
+              (accumulator: string, [key, value]: [string, { dataType: string, value: any }]): string => {
+                if (Object.isObject(value) && Object.isString(value.dataType)) {
+                  accumulator += `DECLARE @${ key } ${ value.dataType } = ${ Object.isString(value.value) ? "'" : '' }${ value.value }${ Object.isString(value.value) ? "'" : '' }; `;
+                }
 
-              return accumulator;
-            },
-            ``
-          );
+                return accumulator;
+              },
+              ``
+            );
 
-          parameterMap.sql = parameterDeclaration + parameterMap.sql;
+          parameterMap.sql = variableDeclaration + parameterMap.sql;
         }
 
         sequelizeInstance = new Sequelize(
@@ -151,7 +160,12 @@ const processQueryData = async (
               new TextDecoder().decode(database.password as Uint8Array)
             ),
             dialect: 'mssql',
-            dialectOptions: { options: { encrypt: false } },
+            dialectOptions: { 
+              options: { 
+                encrypt: false,
+                requestTimeout: 30_000
+              }
+            },
             define: { freezeTableName: true }
           }
         );
@@ -159,19 +173,19 @@ const processQueryData = async (
         break;
     
       case 'MySQL':
-        if (parameterMap.parameterMap) {
-          const parameterDeclaration = Object.entries(parameterMap.parameterMap).reduce(
-            (accumulator: string, [key, value]: [string, { dataType: string, value: any }]): string => {
-              if (Object.isObject(value) && Object.isString(value.dataType)) {
-                accumulator += `DECLARE @${ key } ${ value.dataType } = ${ Object.isString(value.value) ? "'" : '' }${ value.value }${ Object.isString(value.value) ? "'" : '' }; `;
-              }
+        if (parameterMap.variableMap) {
+          const variableDeclaration = Object
+            .entries(parameterMap.variableMap)
+            .reduce(
+              (accumulator: string, [key, value]: [string, any]): string => {
+                accumulator += `SET @${ key } = ${ Object.isString(value) ? "'" : '' }${ value }${ Object.isString(value) ? "'" : '' }; `;
 
-              return accumulator;
-            },
-            ``
-          );
+                return accumulator;
+              },
+              ``
+            );
 
-          parameterMap.sql = parameterDeclaration + parameterMap.sql;
+          parameterMap.sql = variableDeclaration + parameterMap.sql;
         }
 
         sequelizeInstance = new Sequelize(
@@ -198,7 +212,12 @@ const processQueryData = async (
               new TextDecoder().decode(database.password as Uint8Array)
             ),
             dialect: 'mysql',
-            dialectOptions: { options: { encrypt: false } },
+            dialectOptions: { 
+              options: { 
+                encrypt: false,
+                requestTimeout: 30_000
+              }
+            },
             define: { freezeTableName: true }
           }
         );
@@ -206,29 +225,27 @@ const processQueryData = async (
         break;
 
       default:
+        return [
+          name,
+          {
+            timestamp,
+            status: false,
+            id,
+            name,
+            groupName: group_name !== null ? group_name : undefined,
+            databasesId: databases_id,
+            sql: parameterMap.sql,
+            variableMap: parameterMap.variableMap,
+            replacementMap: parameterMap.replacementMap,
+            isQueryActive: is_query_active,
+            createdAt: created_at,
+            updatedAt: updated_at,
+            message: 'Unexpected error occurred while processing the data.',
+            suggestion: 'Please try again later. If this issue persists, contact our support team for assistance.'
+          }
+        ];
     }
     
-    if (!sequelizeInstance) {
-      return [
-        name,
-        {
-          timestamp,
-          status: false,
-          id,
-          name,
-          groupName: group_name !== null ? group_name : undefined,
-          databasesId: databases_id,
-          sql: parameterMap.sql,
-          parameterMap: parameterMap.parameterMap,
-          isQueryActive: is_query_active,
-          createdAt: created_at,
-          updatedAt: updated_at,
-          message: 'Unexpected error occurred while processing the data.',
-          suggestion: 'Please try again later. If this issue persists, contact our support team for assistance.'
-        }
-      ];
-    }
-
     const transaction: Transaction = await sequelizeInstance.transaction();
 
     try {
@@ -236,7 +253,7 @@ const processQueryData = async (
         parameterMap.sql, 
         { 
           type: QueryTypes.SELECT,
-          replacements: parameterMap.parameterMap as Record<string, any> | undefined,
+          replacements: parameterMap.replacementMap as Record<string, any> | undefined,
           transaction
         }
       );
@@ -253,7 +270,8 @@ const processQueryData = async (
           groupName: group_name !== null ? group_name : undefined,
           databasesId: databases_id,
           sql: parameterMap.sql,
-          parameterMap: parameterMap.parameterMap,
+          variableMap: parameterMap.variableMap,
+          replacementMap: parameterMap.replacementMap,
           isQueryActive: is_query_active,
           createdAt: created_at,
           updatedAt: updated_at,
@@ -261,12 +279,12 @@ const processQueryData = async (
         }
       ];
     } catch (error: unknown) {
-      await transaction.rollback();
+      try { await transaction.rollback(); } catch (error: unknown) {}
 
       throw error;
     }
   } catch (error: unknown) {
-    console.log(`Service | Timestamp: ${ timestamp } | Name: processQueryData | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ timestamp } | Path: src/services/getQueryDataMap.service.ts | processQueryData | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
     return [
       name,
@@ -278,7 +296,8 @@ const processQueryData = async (
         groupName: group_name !== null ? group_name : undefined,
         databasesId: databases_id,
         sql: parameterMap.sql,
-        parameterMap: parameterMap.parameterMap,
+        variableMap: parameterMap.variableMap,
+        replacementMap: parameterMap.replacementMap,
         isQueryActive: is_query_active,
         createdAt: created_at,
         updatedAt: updated_at,
@@ -286,6 +305,8 @@ const processQueryData = async (
         suggestion: 'Please try again later. If this issue persists, contact our support team for assistance.'
       }
     ];
+  } finally {
+    try { await sequelizeInstance?.close(); } catch (error: unknown) {}
   }
 };
 
@@ -315,7 +336,7 @@ export const getQueryDataMap = async (
     const queryDataEntryList = await Promise.all(
       queryList.map(
         (query: unknown): Promise<[string, IQueryData.ISuccessQueryData | IQueryData.IErrorQueryData]> => {
-          return processQueryData(query as IQuery.IQuery, req, dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()));
+          return processQueryData(query as IQuery.IQuery, req, momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'));
         }
       )
     );
@@ -337,7 +358,7 @@ export const getQueryDataMap = async (
       }
     };
   } catch (error: unknown) {
-    console.log(`Service | Timestamp: ${ timestamp } | Name: getQueryDataMap | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ timestamp } | Path: src/services/getQueryDataMap.service.ts | Location: getQueryDataMap | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
     return {
       status: 500,

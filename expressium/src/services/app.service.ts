@@ -241,6 +241,7 @@ export const getAuthentication = async (
     }
 
     let expiresIn: number;
+    
     const jwtExpiresInInt = parseInt(process.env.JWT_EXPIRES_IN.slice(0, -1), 10);
     
     switch (process.env.JWT_EXPIRES_IN.slice(-1)) {
@@ -279,7 +280,7 @@ export const getAuthentication = async (
       }
     };
   } catch (error: unknown) {
-    console.log(`Service | Timestamp: ${ timestamp } | Name: getAuthentication | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ timestamp } | Path: expressium/src/services/app.service.ts | Location: getAuthentication | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
     return {
       status: 500,

@@ -1,6 +1,7 @@
 import express, { Express, NextFunction, Request, Response } from 'express';
+import momentTimezone from 'moment-timezone';
 import morgan from 'morgan';
-import startServer, { router, dateTimeFormatterUtil, getAccessLog, createServer } from '../expressium/src/index.js';
+import startServer, { router, getAccessLog, createServer } from '../expressium/src/index.js';
 import { appRoute } from './routes/index.js';
 
 const buildServer = async (): Promise<void> => {
@@ -26,7 +27,7 @@ const buildServer = async (): Promise<void> => {
           .status(404)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 404,
               method: req.method,
@@ -44,9 +45,10 @@ const buildServer = async (): Promise<void> => {
     const serverInstance = await createServer(app);
 
     appRoute.buildRoutes();
+    
     startServer(serverInstance as Express);
   } catch (error: unknown) {
-    console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: src/index.ts | Location: buildServer | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 };
