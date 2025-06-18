@@ -23,7 +23,7 @@
  */
 export interface IRouteMap {
   method: string,
-  version: string,
+  version?: string,
   url: string,
   serviceHandler: Function,
   requiresAuthorization?: boolean

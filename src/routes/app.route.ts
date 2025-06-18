@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
-import { generateRoute, router, IRouteMap, dateTimeFormatterUtil } from '../../expressium/src/index.js';
-import { appService, createQueryService, getQueryDataMapService } from "../services/index.js";
+import momentTimezone from 'moment-timezone';
+import { generateRoute, router, IRouteMap } from '../../expressium/src/index.js';
+import { appService, getQueryDataMapService } from "../services/index.js";
 
 export const buildRoutes = (): void => {
   try {
@@ -10,16 +11,6 @@ export const buildRoutes = (): void => {
         version: 'v1',
         url: 'get/health',
         serviceHandler: appService.getHealth,
-        requiresAuthorization: true
-      } as IRouteMap.IRouteMap
-    );
-
-    generateRoute(
-      {
-        method: 'post',
-        version: 'v1',
-        url: 'create/query',
-        serviceHandler: createQueryService.createQuery,
         requiresAuthorization: true
       } as IRouteMap.IRouteMap
     );
@@ -44,7 +35,7 @@ export const buildRoutes = (): void => {
           .status(404)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 404,
               method: req.method,
@@ -59,7 +50,7 @@ export const buildRoutes = (): void => {
       }
     );
   } catch (error: unknown) {
-    console.log(`Route | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Name: buildRoutes | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: src/routes/app.route.ts | Location: buildRoutes | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 };

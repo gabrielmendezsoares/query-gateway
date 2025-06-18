@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import JWT from 'jsonwebtoken';
+import momentTimezone from 'moment-timezone';
 import { IResponse, IResponseData } from '../interfaces/index.js';
 import { IDecodedToken } from './interfaces/index.js';
-import { dateTimeFormatterUtil } from '../utils/index.js';
 
 /**
  * ## getAuthorization
@@ -65,7 +65,7 @@ export const getAuthorization = async (
       .status(500)
       .json(
         {
-          timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+          timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
           status: false,
           statusCode: 500,
           method: req.method,
@@ -88,7 +88,7 @@ export const getAuthorization = async (
       .status(401)
       .json(
         {
-          timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+          timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
           status: false,
           statusCode: 401,
           method: req.method,
@@ -120,7 +120,7 @@ export const getAuthorization = async (
               .status(401)
               .json(
                 {
-                  timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+                  timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
                   status: false,
                   statusCode: 401,
                   method: req.method,
@@ -143,7 +143,7 @@ export const getAuthorization = async (
           .status(401)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 401,
               method: req.method,
@@ -166,13 +166,13 @@ export const getAuthorization = async (
       return;
     } catch(error: unknown) {
       if (error instanceof JWT.JsonWebTokenError) {
-        console.log(`Middleware | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Name: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
+        console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/middlewares/app.middleware.ts | Location: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
         res
           .status(401)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 401,
               method: req.method,
@@ -187,13 +187,13 @@ export const getAuthorization = async (
 
         return;
       } else if (error instanceof JWT.NotBeforeError) {
-        console.log(`Middleware | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Name: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
+        console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/middlewares/app.middleware.ts | Location: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
         res
           .status(401)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 401,
               method: req.method,
@@ -208,13 +208,13 @@ export const getAuthorization = async (
 
         return;
       } else if (error instanceof JWT.TokenExpiredError) {
-        console.log(`Middleware | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Name: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
+        console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/middlewares/app.middleware.ts | Location: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
         res
           .status(401)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 401,
               method: req.method,
@@ -233,13 +233,13 @@ export const getAuthorization = async (
       throw error;
     }
   } catch (error: unknown) {
-    console.log(`Middleware | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Name: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/middlewares/app.middleware.ts | Location: getAuthorization | Error: ${ error instanceof Error ? error.message : String(error) }`);
 
     res
       .status(500)
       .json(
         {
-          timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+          timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
           status: false,
           statusCode: 500,
           method: req.method,

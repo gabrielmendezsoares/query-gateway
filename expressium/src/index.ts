@@ -1,5 +1,6 @@
 import { Express } from 'express';
 import { IncomingMessage, Server, ServerResponse } from 'http';
+import momentTimezone from 'moment-timezone';
 import { ApiError, BaseError } from './errors/index.js';
 import { appRoute } from './routes/index.js';
 import { IRouteMap } from './routes/interfaces/index.js';
@@ -82,7 +83,7 @@ const PORT = process.env.PORT ?? '3000';
  * Sets up periodic server status logging.
  *
  * @description Creates a recurring timer that logs server timestamp and port information
- * every LOG_INTERVAL milliseconds (10 minutes). The timer uses unref() to avoid
+ * every LOG_INTERVAL milliseconds (1 minute). The timer uses unref() to avoid
  * preventing Node.js process termination when it's the only active handle.
  * 
  * @returns Timer reference that can be cleared if needed.
@@ -90,7 +91,7 @@ const PORT = process.env.PORT ?? '3000';
 const setupPeriodicLogging = (): NodeJS.Timeout => {
   return setInterval(
     async (): Promise<void> => {
-      console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Port: ${ PORT }`);
+      console.log(`Application | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Port: ${ PORT }`);
     }, 
     LOG_INTERVAL
   ).unref();
@@ -116,18 +117,18 @@ const setupGracefulShutdown = (runningServerInstance: Server<typeof IncomingMess
       process.on(
         shutdownSignal, 
         (): void => {
-          console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Status: ${ shutdownSignal } received. Shutting down the server`);
+          console.log(`Application | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Status: ${ shutdownSignal } received. Shutting down the server`);
           
           runningServerInstance.close(
             (): void => {
-              console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Status: Server closed`);
+              console.log(`Application | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Status: Server closed`);
               process.exit(0);
             }
           );
           
           setTimeout(
             (): void => {
-              console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Status: Forcing server shutdown after timeout`);
+              console.log(`Application | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Status: Forcing server shutdown after timeout`);
               process.exit(1);
             }, 
             SHUTDOWN_TIMEOUT
@@ -165,7 +166,7 @@ const startServer = async (serverInstance: Express | Server<typeof IncomingMessa
     const RunningServerInstance = serverInstance.listen(
       PORT, 
       async (): Promise<void> => {
-        console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Status: Server started`);
+        console.log(`Application | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Status: Server started`);
         setupPeriodicLogging();
       }
     );
@@ -176,9 +177,9 @@ const startServer = async (serverInstance: Express | Server<typeof IncomingMessa
       'error', 
       (error: NodeJS.ErrnoException): void => {
         if (error.code === 'EADDRINUSE') {
-          console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: Port ${ PORT } is already in use`);
+          console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: Port ${ PORT } is already in use`);
         } else {
-          console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: ${ error.message }`);
+          console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: ${ error.message }`);
         }
 
         process.exit(1);
@@ -187,7 +188,7 @@ const startServer = async (serverInstance: Express | Server<typeof IncomingMessa
 
     return RunningServerInstance;
   } catch (error: unknown) {
-    console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/index.ts | Location: startServer | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 };
@@ -195,7 +196,7 @@ const startServer = async (serverInstance: Express | Server<typeof IncomingMessa
 process.on(
   'uncaughtException', 
   (error: unknown): void => {
-    console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 );
@@ -203,7 +204,7 @@ process.on(
 process.on(
   'unhandledRejection', 
   (error: unknown): void => {
-    console.log(`Server | Timestamp: ${ dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()) } | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 );
@@ -233,11 +234,11 @@ export default startServer;
  * 
  * @param routeMap - Configuration object defining the route.
  * @param routeMap.method - HTTP method (e.g., 'get', 'post', etc.).
- * @param routeMap.version - Version (e.g., 'v1', 'v2', etc.).
+ * @param routeMap.version - Version (e.g., 'v1', 'v2', etc.) (optional).
  * @param routeMap.url - URL path.
  * @param routeMap.serviceHandler - Business logic function.
  * @param routeMap.requiresAuthorization - Whether authorization is required (default: true).
- * @param routeMap.dynamicSegmentList - List of dynamic segments in the URL.
+ * @param routeMap.dynamicSegmentList - List of dynamic segments in the URL (optional).
  * @param routeMap.roleList - List of roles allowed to access the route (optional).
  * @param routeMap.middlewareHandlerList - List of middleware functions to apply to the route (optional).
  */

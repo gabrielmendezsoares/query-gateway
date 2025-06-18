@@ -5,9 +5,9 @@ import { rateLimit, RateLimitRequestHandler } from 'express-rate-limit';
 import fs from 'fs/promises';
 import https, { Server } from 'https';
 import { createRequire } from 'module';
+import momentTimezone from 'moment-timezone';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dateTimeFormatterUtil } from './utils/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -54,8 +54,7 @@ export const getAccessLog = async (): Promise<fs.FileHandle> => {
  * When rate limit is exceeded, returns a 429 status with JSON response containing:
  * 
  * - Current timestamp
- * - Reset time
- * - Request details (method, path, query parameters, headers, body)
+ * - Request details (method, path, query, headers, body)
  * - Informative message and suggestion
  * 
  * @returns Configured Express rate limit middleware.
@@ -75,7 +74,7 @@ export const getRateLimiter = (): RateLimitRequestHandler => {
           .status(429)
           .json(
             {
-              timestamp: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(dateTimeFormatterUtil.getLocalDate()),
+              timestamp: momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss'),
               status: false,
               statusCode: 429,
               method: req.method,
@@ -84,8 +83,7 @@ export const getRateLimiter = (): RateLimitRequestHandler => {
               headers: req.headers,
               body: req.body,
               message: 'Too many requests from this IP.',
-              suggestion: 'Please wait before trying again.',
-              resetTime: dateTimeFormatterUtil.formatAsDayMonthYearHoursMinutesSeconds(req.rateLimit.resetTime as Date)
+              suggestion: 'Please wait before trying again.'
             }
           );
       }
