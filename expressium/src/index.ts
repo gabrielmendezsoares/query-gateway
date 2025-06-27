@@ -177,9 +177,9 @@ const startServer = async (serverInstance: Express | Server<typeof IncomingMessa
       'error', 
       (error: NodeJS.ErrnoException): void => {
         if (error.code === 'EADDRINUSE') {
-          console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: Port ${ PORT } is already in use`);
+          console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/index.ts | Location: startServer | Error: Port ${ PORT } is already in use`);
         } else {
-          console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: ${ error.message }`);
+          console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/index.ts | Location: startServer | Error: ${ error.message }`);
         }
 
         process.exit(1);
@@ -196,7 +196,7 @@ const startServer = async (serverInstance: Express | Server<typeof IncomingMessa
 process.on(
   'uncaughtException', 
   (error: unknown): void => {
-    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/index.ts | Location: ~ | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 );
@@ -204,7 +204,7 @@ process.on(
 process.on(
   'unhandledRejection', 
   (error: unknown): void => {
-    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Error: ${ error instanceof Error ? error.message : String(error) }`);
+    console.log(`Error | Timestamp: ${ momentTimezone().utc().format('DD-MM-YYYY HH:mm:ss') } | Path: expressium/src/index.ts | Location: ~ | Error: ${ error instanceof Error ? error.message : String(error) }`);
     process.exit(1);
   }
 );

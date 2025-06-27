@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import osu from 'node-os-utils';
-import { IResponse, IResponseData } from '../interfaces/index.js';
+import { IResponse, IResponseData } from './interfaces/index.js';
 
 export const getHealth = async (
   req: Request, 
