@@ -4,7 +4,7 @@ import OracleDB from 'oracledb';
 import { QueryTypes, Sequelize, Transaction } from 'sequelize';
 import { PrismaClient } from '@prisma/client/storage/client.js';
 import { cryptographyUtil } from '../../expressium/src/index.js';
-import { IQuery, IQueryData, IReqBody, IResponse, IResponseData } from '../interfaces/index.js';
+import { IQuery, IQueryData, IReqBody, IResponse, IResponseData } from './interfaces/index.js';
 
 const prisma = new PrismaClient();
 
@@ -85,6 +85,58 @@ const processQueryData = async (
     }
 
     switch (database.database_type) {
+      case 'MySQL':
+        if (parameterMap.variableMap) {
+          const variableDeclaration = Object
+            .entries(parameterMap.variableMap)
+            .reduce(
+              (accumulator: string, [key, value]: [string, any]): string => {
+                accumulator += `SET @${ key } = ${ Object.isString(value) ? "'" : '' }${ value }${ Object.isString(value) ? "'" : '' }; `;
+
+                return accumulator;
+              },
+              ``
+            );
+
+          parameterMap.sql = variableDeclaration + parameterMap.sql;
+        }
+
+        sequelizeInstance = new Sequelize(
+          {
+            host: cryptographyUtil.decryptFromAes256Cbc(
+              process.env.DATABASES_HOST_ENCRYPTION_KEY as string, 
+              process.env.DATABASES_HOST_IV_STRING as string, 
+              new TextDecoder().decode(database.host as Uint8Array)
+            ),
+            port: database.port ? database.port : undefined,
+            database: cryptographyUtil.decryptFromAes256Cbc(
+              process.env.DATABASES_DATABASE_ENCRYPTION_KEY as string, 
+              process.env.DATABASES_DATABASE_IV_STRING as string, 
+              new TextDecoder().decode(database.database as Uint8Array)
+            ),
+            username: cryptographyUtil.decryptFromAes256Cbc(
+              process.env.DATABASES_USERNAME_ENCRYPTION_KEY as string,
+              process.env.DATABASES_USERNAME_IV_STRING as string,
+              new TextDecoder().decode(database.username as Uint8Array)
+            ),
+            password: cryptographyUtil.decryptFromAes256Cbc(
+              process.env.DATABASES_PASSWORD_ENCRYPTION_KEY as string, 
+              process.env.DATABASES_PASSWORD_IV_STRING as string, 
+              new TextDecoder().decode(database.password as Uint8Array)
+            ),
+            dialect: 'mysql',
+            dialectOptions: { 
+              options: { 
+                encrypt: false,
+                requestTimeout: 30_000
+              }
+            },
+            define: { freezeTableName: true }
+          }
+        );
+
+        break;
+
       case 'Oracle':
         sequelizeInstance = new Sequelize(
           {
@@ -172,58 +224,6 @@ const processQueryData = async (
 
         break;
     
-      case 'MySQL':
-        if (parameterMap.variableMap) {
-          const variableDeclaration = Object
-            .entries(parameterMap.variableMap)
-            .reduce(
-              (accumulator: string, [key, value]: [string, any]): string => {
-                accumulator += `SET @${ key } = ${ Object.isString(value) ? "'" : '' }${ value }${ Object.isString(value) ? "'" : '' }; `;
-
-                return accumulator;
-              },
-              ``
-            );
-
-          parameterMap.sql = variableDeclaration + parameterMap.sql;
-        }
-
-        sequelizeInstance = new Sequelize(
-          {
-            host: cryptographyUtil.decryptFromAes256Cbc(
-              process.env.DATABASES_HOST_ENCRYPTION_KEY as string, 
-              process.env.DATABASES_HOST_IV_STRING as string, 
-              new TextDecoder().decode(database.host as Uint8Array)
-            ),
-            port: database.port ? database.port : undefined,
-            database: cryptographyUtil.decryptFromAes256Cbc(
-              process.env.DATABASES_DATABASE_ENCRYPTION_KEY as string, 
-              process.env.DATABASES_DATABASE_IV_STRING as string, 
-              new TextDecoder().decode(database.database as Uint8Array)
-            ),
-            username: cryptographyUtil.decryptFromAes256Cbc(
-              process.env.DATABASES_USERNAME_ENCRYPTION_KEY as string,
-              process.env.DATABASES_USERNAME_IV_STRING as string,
-              new TextDecoder().decode(database.username as Uint8Array)
-            ),
-            password: cryptographyUtil.decryptFromAes256Cbc(
-              process.env.DATABASES_PASSWORD_ENCRYPTION_KEY as string, 
-              process.env.DATABASES_PASSWORD_IV_STRING as string, 
-              new TextDecoder().decode(database.password as Uint8Array)
-            ),
-            dialect: 'mysql',
-            dialectOptions: { 
-              options: { 
-                encrypt: false,
-                requestTimeout: 30_000
-              }
-            },
-            define: { freezeTableName: true }
-          }
-        );
-
-        break;
-
       default:
         return [
           name,
