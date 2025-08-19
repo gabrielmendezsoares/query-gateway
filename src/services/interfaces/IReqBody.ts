@@ -1,11 +1,3 @@
-import { IQuery } from "./index.js"
+import { query_gateway_queries } from "@prisma/client/storage/index.js";
 
-export interface ICreateQueryReqBody {
-  databaseName: string;
-  sql: string;
-}
-
-export interface IGetQueryDataMapReqBody {
-  filterMap: Record<keyof IQuery.IQuery, any>;
-  globalReplacementMap: IQuery.IQuery;
-}
+export interface ICreateQueryDataReqBody { filterMap: Record<keyof query_gateway_queries, any>; }

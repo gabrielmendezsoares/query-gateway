@@ -1,0 +1,501 @@
+openapi: 3.0.3
+info:
+  title: 🔍 Query Gateway
+  version: 3.0.1
+  description: |
+    ## 📋 Overview
+
+    The Query Gateway is a dynamic SQL execution engine that securely connects to multiple database types (MySQL, SQL Server, Oracle) and executes pre-configured queries stored in the system. It supports runtime decryption of database credentials, dynamic query construction with variable and replacement maps, and unified result aggregation across sources.
+
+    This service enables a centralized way to securely and flexibly query external databases without hardcoding SQL, database credentials, or connection logic in client applications.
+
+    ### 🎯 Objectives
+
+    - Dynamically execute stored SQL queries across multiple databases
+    - Support MySQL, SQL Server, and Oracle with dialect-specific handling
+    - Securely decrypt and use database credentials at runtime (AES-256-CBC)
+    - Allow dynamic parameterization via variable_map and replacement_map
+    - Gracefully handle failures per query while maintaining partial success responses
+    - Return all query results in a unified, structured response object
+    - Enable easy extension and onboarding of new data sources through configuration
+servers:
+  - url: http://localhost:3042
+    description: Development server
+components:
+  securitySchemes:
+    Basic:
+      type: http
+      scheme: basic
+      description: Basic authentication using username and password
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer authentication using JWT token
+  schemas:
+    ICreateQueryDataReqBody:
+      type: object
+      properties:
+        filterMap:
+          type: object
+          additionalProperties: true
+          description: Optional filter criteria for narrowing down the query list to process.
+      example:
+        filterMap:
+          name: ["Get Weather", "Get Users"]          
+    IResponseData:
+      type: object
+      required:
+        - message
+        - suggestion
+      properties:
+        message:
+          type: string
+          description: Human-readable error message.
+          example: "Authentication token has expired."
+        suggestion:
+          type: string
+          description: Suggested action to resolve the error.
+          example: "Please sign in again to obtain a new token."
+    IGetAuthenticationResponseData:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - username
+            - roleList
+            - token
+            - expiresIn
+          properties:
+            username:
+              type: string
+              description: Username of the authenticated user.
+              example: "john.doe"
+            roleList:
+              type: array
+              description: Roles or permissions assigned to the user.
+              items:
+                type: string
+              example: ["admin", "user"]
+            token:
+              type: string
+              description: Signed JWT token for subsequent authenticated requests.
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            expiresIn:
+              type: integer
+              format: int64
+              description: Token expiration time in milliseconds.
+              example: 1726080123123
+    IGetHealthResponseData:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - cpuUsage
+            - memoryUsage
+            - port
+            - logLevel
+          properties:
+            cpuUsage:
+              type: object
+              required:
+                - name
+                - value
+              properties:
+                name:
+                  type: string
+                  description: Label for CPU usage metric.
+                  example: "Uso de CPU"
+                value:
+                  type: string
+                  description: Value of CPU usage.
+                  example: "8.1%"
+                isListeningModifiedEvent:
+                  type: boolean
+                  description: If monitor should listen for modification events.
+                  example: false
+            memoryUsage:
+              type: object
+              required:
+                - name
+                - value
+              properties:
+                name:
+                  type: string
+                  description: Label for memory usage metric.
+                  example: "Uso de memória"
+                value:
+                  type: string
+                  description: Value of memory usage.
+                  example: "8.1MB"
+                isListeningModifiedEvent:
+                  type: boolean
+                  description: If monitor should listen for modification events.
+                  example: false
+            port:
+              type: object
+              required:
+                - name
+                - value
+              properties:
+                name:
+                  type: string
+                  description: Label indicating which port the application is running on.
+                  example: "Porta"
+                value:
+                  type: string
+                  description: Port number the application is currently using.
+                  example: "3000"
+                isListeningModifiedEvent:
+                  type: boolean
+                  description: If monitor should listen for modification events.
+                  example: true
+            logLevel:
+              type: object
+              required:
+                - name
+                - value
+              properties:
+                name:
+                  type: string
+                  description: Label indicating the current logging level.
+                  example: "Nível de log"
+                value:
+                  type: string
+                  description: Current log level set for the application.
+                  example: "info"
+                isListeningModifiedEvent:
+                  type: boolean
+                  description: If monitor should listen for modification events.
+                  example: true
+    ICreateApiDataResponseData:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          description: |
+            A key-value mapping of API names to their corresponding response results.
+
+            - The key is the `name` of the API as stored in the system.
+            - The value is the remote API's response, which may either include data from the third-party system, or a fallback error response if the call failed.
+
+            This structure enables clients to clearly see which APIs succeeded and which encountered issues, all in a single unified response.
+      example:
+        data:
+          Get Weather:
+            data:
+              temperature: "25°C"
+              condition: "Cloudy"
+              humidity: "80%"
+          Get Users:
+            message: "The api data creation process encountered a technical issue."
+            suggestion: "Please try again later or contact support if the issue persists."
+tags:
+  - name: Application
+    description: Core system operations including authentication, health monitoring, and system management
+paths:
+  /api/v1/get/authentication:
+    get:
+      tags:
+        - Application
+      summary: Authenticate user and issue JWT token
+      description: |
+        Authenticates a user via Basic Authentication and issues a signed JWT token upon successful validation.
+        A request was made on it to verify credentials and generate an access token for authorized usage.
+      security:
+        - Basic: []
+      responses:
+        '200':
+          description: The request was successfully received, understood, and processed. A valid response was generated based on the request made on it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IGetAuthenticationResponseData'
+              example:
+                data:
+                  username: "john.doe"
+                  roleList: ["admin", "user"]
+                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  expiresIn: 1726080123123
+        '400':
+          description: The server could not process the request due to invalid syntax, malformed data, or missing parameters. Although there was a request on it, the client must correct the request before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: Authorization header required for secure access
+                  value:
+                    message: "Authorization header required for secure access."
+                    suggestion: "Include an Authorization header using the Basic scheme: \"Basic base64(username:password)\"."
+                example_2:
+                  summary: Authorization must use Basic authentication scheme
+                  value:
+                    message: "Authorization must use Basic authentication scheme."
+                    suggestion: "Use the Basic authentication scheme: \"Basic base64(username:password)\"."
+        '401':
+          description: The request was received and a request was made on it, but the client failed to provide valid authentication credentials. Access is denied until proper authentication is provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: Invalid username
+                  value:
+                    message: "Invalid username."
+                    suggestion: "Ensure the username is correct or register for an account if you don’t have one."
+                example_2:
+                  summary: Incorrect password
+                  value:
+                    message: "Incorrect password."
+                    suggestion: "Double-check your password or reset it if you’ve forgotten it."
+        '403':
+          description: Account is inactive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              example:
+                message: "Account is inactive."
+                suggestion: "Contact your administrator to request account reactivation."
+        '500':
+          description: Authentication process encountered a technical issue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              example:
+                message: "Authentication process encountered a technical issue."
+                suggestion: "Please try again later or contact support if the issue persists."
+  /api/v1/create/query-data:
+    post:
+      tags:
+        - Application
+      summary: Create Query Data from Registered Query Gateway Sources
+      description: |
+        Processes multiple Query Gateway entries stored in the system, executes their configured SQL queries using encrypted database credentials (MySQL, Oracle, SQL Server), and returns their results in a mapped object format.
+        A request was made on it to dynamically fetch data from configured remote databases using stored metadata.
+      security:
+        - Bearer: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ICreateQueryDataReqBody' 
+            example:
+              filterMap:
+                name: ["Get Weather", "Get Users"]      
+      responses:
+        '200':
+          description: The request was successfully received, understood, and processed. A valid response was generated based on the request made on it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ICreateQueryDataResponseData'
+              example:
+                data:
+                  Get Weather:
+                    data: [
+                      {
+                        temperature: "25°C",
+                        condition: "Cloudy"
+                      }
+                    ]
+                  Get Users:
+                    message: "The query data creation process encountered a technical issue."
+                    suggestion: "Please try again later or contact support if the issue persists."
+        '400':
+          description: The server could not process the request due to invalid syntax, malformed data, or missing parameters. Although there was a request on it, the client must correct the request before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: Missing Authorization header
+                  value:
+                    message: "Missing Authorization header."
+                    suggestion: "Include an Authorization header using the Bearer scheme: \"Bearer <token>\"."
+                example_2:
+                  summary: Invalid Authorization scheme
+                  value:
+                    message: "Invalid Authorization scheme."
+                    suggestion: "Use the Bearer authentication scheme: \"Bearer <token>\"."
+        '401':
+          description: The request was received and a request was made on it, but the client failed to provide valid authentication credentials. Access is denied until proper authentication is provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: Authentication token has expired
+                  value:
+                    message: "Authentication token has expired."
+                    suggestion: "Please sign in again to obtain a new token."
+                example_2:
+                  summary: Invalid authentication token
+                  value:
+                    message: "Invalid authentication token."
+                    suggestion: "Ensure your token is valid and has not been tampered with."
+                example_3:
+                  summary: Authentication token is not yet active
+                  value:
+                    message: "Authentication token is not yet active."
+                    suggestion: "Wait until the token’s start time before using it."
+                example_4:
+                  summary: Authentication token has expired
+                  value:
+                    message: "Authentication token has expired."
+                    suggestion: "Please sign in again to obtain a new token."
+        '403':
+          description: Missing required role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              example:
+                message: "Missing required role."
+                suggestion: "If you believe this is an error, contact your administrator to request appropriate access."    
+        '500':
+          description: The server encountered an unexpected error while processing the request. A request was made on it, but the server failed to complete the operation due to an internal issue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: The authorization process is temporarily unavailable
+                  value:
+                    message: "The authorization process is temporarily unavailable."
+                    suggestion: "Please try again later or contact support if the issue persists."
+                example_2:
+                  summary: The authorization process encountered a technical issue
+                  value:
+                    message: "The authorization process encountered a technical issue."
+                    suggestion: "Please try again later or contact support if the issue persists."
+                example_3:
+                  summary: The api data creation process encountered a technical issue
+                  value:
+                    message: "The api data creation process encountered a technical issue."
+                    suggestion: "Please try again later or contact support if the issue persists."
+  /api/v1/get/health:
+    get:
+      tags:
+        - Application
+      summary: Retrieve application health metrics
+      description: |
+        Returns current system health indicators such as CPU and memory usage.
+        A request was made on it to monitor the application’s operational status in real time.
+      security:
+        - Bearer: []
+      responses:
+        '200':
+          description: The request was successfully received, understood, and processed. A valid response was generated based on the request made on it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IGetHealthResponseData'
+              example:
+                data:
+                  cpuUsage:
+                    name: "Uso de CPU"
+                    value: "8.1%"
+                  memoryUsage:
+                    name: "Uso de memória"
+                    value: "8.1MB"
+                  port:
+                    name: "Porta"
+                    value: "3000"
+                    isListeningModifiedEvent: true
+                  logLevel:
+                    name: "Nível de log"
+                    value: "info"
+                    isListeningModifiedEvent: true
+        '400':
+          description: The server could not process the request due to invalid syntax, malformed data, or missing parameters. Although there was a request on it, the client must correct the request before retrying.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: Missing Authorization header
+                  value:
+                    message: "Missing Authorization header."
+                    suggestion: "Include an Authorization header using the Bearer scheme: \"Bearer <token>\"."
+                example_2:
+                  summary: Invalid Authorization scheme
+                  value:
+                    message: "Invalid Authorization scheme."
+                    suggestion: "Use the Bearer authentication scheme: \"Bearer <token>\"."
+        '401':
+          description: The request was received and a request was made on it, but the client failed to provide valid authentication credentials. Access is denied until proper authentication is provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: Authentication token has expired
+                  value:
+                    message: "Authentication token has expired."
+                    suggestion: "Please sign in again to obtain a new token."
+                example_2:
+                  summary: Invalid authentication token
+                  value:
+                    message: "Invalid authentication token."
+                    suggestion: "Ensure your token is valid and has not been tampered with."
+                example_3:
+                  summary: Authentication token is not yet active
+                  value:
+                    message: "Authentication token is not yet active."
+                    suggestion: "Wait until the token’s start time before using it."
+                example_4:
+                  summary: Authentication token has expired
+                  value:
+                    message: "Authentication token has expired."
+                    suggestion: "Please sign in again to obtain a new token."
+        '403':
+          description: Missing required role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              example:
+                message: "Missing required role."
+                suggestion: "If you believe this is an error, contact your administrator to request appropriate access."    
+        '500':
+          description: The server encountered an unexpected error while processing the request. A request was made on it, but the server failed to complete the operation due to an internal issue.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IResponseData'
+              examples:
+                example_1:
+                  summary: The authorization process is temporarily unavailable
+                  value:
+                    message: "The authorization process is temporarily unavailable."
+                    suggestion: "Please try again later or contact support if the issue persists."
+                example_2:
+                  summary: The authorization process encountered a technical issue
+                  value:
+                    message: "The authorization process encountered a technical issue."
+                    suggestion: "Please try again later or contact support if the issue persists."
+                example_3:
+                  summary: The health diagnostic process encountered a technical issue
+                  value:
+                    message: "The health diagnostic process encountered a technical issue."
+                    suggestion: "Please try again later or contact support if the issue persists."
