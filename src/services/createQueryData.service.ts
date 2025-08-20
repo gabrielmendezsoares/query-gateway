@@ -1,17 +1,20 @@
 import { Request } from 'express';
-import { isObjectType, isString } from 'remeda';
-import { query_gateway_queries, PrismaClient } from '@prisma/client/storage/client.js';
 import OracleDB from 'oracledb';
+import { isObjectType, isString } from 'remeda';
 import { QueryTypes, Sequelize, Transaction } from 'sequelize';
+import { query_gateway_queries, PrismaClient } from '@prisma/client/storage/client.js';
+import { JsonObject } from '@prisma/client/storage/runtime/library.js';
 import { cryptographyUtil, loggerUtil } from '../../expressium/index.js';
 import { IReqBody, IResponse, IResponseData } from './interfaces/index.js';
+
+const REQUEST_TIMEOUT = 30_000;
 
 const prisma = new PrismaClient();
 
 const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[string, any]> => {
   const {
     name,
-    databases_id,
+    database_id,
     sql,
     variable_map,
     replacement_map
@@ -20,7 +23,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
   let sequelizeInstance: Sequelize | undefined;
 
   try {
-    const database = await prisma.databases.findUnique({ where: { id: databases_id } });
+    const database = await prisma.databases.findUnique({ where: { id: database_id } });
     
     if (!database) {
       return [
@@ -32,7 +35,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
       ];
     }
 
-    let currentSql = sql
+    let querySql = sql
 
     switch (database.database_type) {
       case 'MySQL':
@@ -40,15 +43,18 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
           const variableDeclaration = Object
             .entries(variable_map)
             .reduce(
-              (accumulator: string, [key, value]: [string, any]): string => {
+              (
+                accumulator: string, 
+                [key, value]: [string, any]
+              ): string => {
                 accumulator += `SET @${ key } = ${ isString(value) ? "'" : '' }${ value }${ isString(value) ? "'" : '' }; `;
 
                 return accumulator;
               },
-              ``
+              ''
             );
 
-          currentSql = variableDeclaration + currentSql;
+          querySql = variableDeclaration + querySql;
         }
 
         sequelizeInstance = new Sequelize(
@@ -58,7 +64,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
               process.env.DATABASES_HOST_IV_STRING as string, 
               new TextDecoder().decode(database.host as Uint8Array<ArrayBufferLike>)
             ),
-            port: database.port ? database.port : undefined,
+            port: database.port as number,
             database: cryptographyUtil.decryptFromAes256Cbc(
               process.env.DATABASES_DATABASE_ENCRYPTION_KEY as string, 
               process.env.DATABASES_DATABASE_IV_STRING as string, 
@@ -78,7 +84,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
             dialectOptions: { 
               options: { 
                 encrypt: false,
-                requestTimeout: 30_000
+                requestTimeout: REQUEST_TIMEOUT
               }
             },
             define: { freezeTableName: true }
@@ -90,7 +96,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
       case 'Oracle':
         sequelizeInstance = new Sequelize(
           {
-            port: database.port ? database.port : undefined,
+            port: database.port as number,
             username: cryptographyUtil.decryptFromAes256Cbc(
               process.env.DATABASES_USERNAME_ENCRYPTION_KEY as string, 
               process.env.DATABASES_USERNAME_IV_STRING as string, 
@@ -111,7 +117,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
               ),
               options: { 
                 encrypt: false,
-                requestTimeout: 30_000
+                requestTimeout: REQUEST_TIMEOUT
               }
             },
             define: { freezeTableName: true }
@@ -125,17 +131,20 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
           const variableDeclaration = Object
             .entries(variable_map)
             .reduce(
-              (accumulator: string, [key, value]: [string, { dataType: string, value: any }]): string => {
+              (
+                accumulator: string, 
+                [key, value]: [string, { dataType: string, value: any }]
+              ): string => {
                 if (isObjectType(value) && isString(value.dataType)) {
                   accumulator += `DECLARE @${ key } ${ value.dataType } = ${ isString(value.value) ? "'" : '' }${ value.value }${ isString(value.value) ? "'" : '' }; `;
                 }
 
                 return accumulator;
               },
-              ``
+              ''
             );
 
-          currentSql = variableDeclaration + currentSql;
+          querySql = variableDeclaration + querySql;
         }
 
         sequelizeInstance = new Sequelize(
@@ -145,7 +154,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
               process.env.DATABASES_HOST_IV_STRING as string, 
               new TextDecoder().decode(database.host as Uint8Array<ArrayBufferLike>)
             ),
-            port: database.port ? database.port : undefined,
+            port: database.port as number,
             database: cryptographyUtil.decryptFromAes256Cbc(
               process.env.DATABASES_DATABASE_ENCRYPTION_KEY as string, 
               process.env.DATABASES_DATABASE_IV_STRING as string, 
@@ -165,7 +174,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
             dialectOptions: { 
               options: { 
                 encrypt: false,
-                requestTimeout: 30_000
+                requestTimeout: REQUEST_TIMEOUT
               }
             },
             define: { freezeTableName: true }
@@ -175,17 +184,23 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
         break;
     
       default:
-        break;
+        return [
+          name,
+          {
+            message: 'The query data creation process encountered a technical issue.',
+            suggestion: 'Please try again later or contact support if the issue persists.'
+          }
+        ];
     }
 
     const transaction: Transaction = await sequelizeInstance.transaction();
 
     try {
-      const queryResult = await sequelizeInstance.query<Promise<object[]>>(
-        sql, 
+      const queryResult = await sequelizeInstance.query<Promise<Record<keyof query_gateway_queries, any>[]>>(
+        querySql, 
         { 
           type: QueryTypes.SELECT,
-          replacements: replacement_map ?? undefined,
+          replacements: replacement_map as JsonObject | undefined ?? undefined,
           transaction
         }
       );
