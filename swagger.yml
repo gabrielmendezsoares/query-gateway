@@ -174,7 +174,7 @@ components:
                   type: boolean
                   description: If monitor should listen for modification events.
                   example: true
-    ICreateApiDataResponseData:
+    ICreateQueryDataResponseData:
       type: object
       required:
         - data
@@ -183,10 +183,10 @@ components:
           type: object
           additionalProperties: true
           description: |
-            A key-value mapping of API names to their corresponding response results.
+            A key-value mapping of query names to their corresponding response results.
 
-            - The key is the `name` of the API as stored in the system.
-            - The value is the remote API's response, which may either include data from the third-party system, or a fallback error response if the call failed.
+            - The key is the `name` of the query as stored in the system.
+            - The value is either the result of the SQL execution from the connected database, or a structured error response if the query failed.
 
             This structure enables clients to clearly see which APIs succeeded and which encountered issues, all in a single unified response.
       example:
@@ -195,9 +195,8 @@ components:
             data:
               temperature: "25°C"
               condition: "Cloudy"
-              humidity: "80%"
           Get Users:
-            message: "The api data creation process encountered a technical issue."
+            message: "The query data creation process encountered a technical issue."
             suggestion: "Please try again later or contact support if the issue persists."
 tags:
   - name: Application
@@ -282,7 +281,7 @@ paths:
     post:
       tags:
         - Application
-      summary: Create Query Data from Registered Query Gateway Sources
+      summary: Create query data from registered Query Gateway sources
       description: |
         Processes multiple Query Gateway entries stored in the system, executes their configured SQL queries using encrypted database credentials (MySQL, Oracle, SQL Server), and returns their results in a mapped object format.
         A request was made on it to dynamically fetch data from configured remote databases using stored metadata.

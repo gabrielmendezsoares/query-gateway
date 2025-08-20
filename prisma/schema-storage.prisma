@@ -68,19 +68,20 @@ model database_types {
 }
 
 model databases {
-  id             Int            @id @default(autoincrement())
-  name           String         @unique(map: "name") @db.VarChar(255)
-  database_type  String         @db.VarChar(255)
-  host           Bytes?
-  port           Int?
-  database       Bytes?
-  username       Bytes
-  password       Bytes
-  connect_string Bytes?
-  created_at     DateTime       @default(now()) @db.DateTime(0)
-  updated_at     DateTime       @default(now()) @db.DateTime(0)
-  database_types database_types @relation(fields: [database_type], references: [database_type], onDelete: Cascade, onUpdate: NoAction, map: "databases_ibfk_1")
-  queries        queries[]
+  id                    Int                     @id @default(autoincrement())
+  name                  String                  @unique(map: "name") @db.VarChar(255)
+  database_type         String                  @db.VarChar(255)
+  host                  Bytes?
+  port                  Int?
+  database              Bytes?
+  username              Bytes
+  password              Bytes
+  connect_string        Bytes?
+  created_at            DateTime                @default(now()) @db.DateTime(0)
+  updated_at            DateTime                @default(now()) @db.DateTime(0)
+  database_types        database_types          @relation(fields: [database_type], references: [database_type], onDelete: Cascade, onUpdate: NoAction, map: "databases_ibfk_1")
+  queries               queries[]
+  query_gateway_queries query_gateway_queries[]
 
   @@index([created_at], map: "idx_created_at")
   @@index([database_type], map: "idx_database_type")
@@ -349,7 +350,7 @@ model sigma_cloud_access_control_events {
   application_type     String            @db.VarChar(255)
   account              String            @db.VarChar(255)
   code                 String            @db.VarChar(255)
-  company_id           String            @db.VarChar(255)
+  company_id           Int               @db.UnsignedInt
   complement           String            @db.VarChar(255)
   event_id             String            @db.VarChar(255)
   protocol_type        String            @db.VarChar(255)
@@ -406,18 +407,18 @@ model sigma_cloud_alarm_events {
 }
 
 model sigma_cloud_d_guard_integration_layouts {
-  id                                         Int                                     @id @default(autoincrement())
-  guid                                       String                                  @db.VarChar(255)
-  sigma_cloud_d_guard_integration_servers_id Int
-  created_at                                 DateTime                                @default(now()) @db.DateTime(0)
-  updated_at                                 DateTime                                @default(now()) @db.DateTime(0)
-  sigma_cloud_d_guard_integration_servers    sigma_cloud_d_guard_integration_servers @relation(fields: [sigma_cloud_d_guard_integration_servers_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sigma_cloud_d_guard_integration_layouts_ibfk_1")
+  id                                        Int                                     @id @default(autoincrement())
+  guid                                      String                                  @db.VarChar(255)
+  sigma_cloud_d_guard_integration_server_id Int
+  created_at                                DateTime                                @default(now()) @db.DateTime(0)
+  updated_at                                DateTime                                @default(now()) @db.DateTime(0)
+  sigma_cloud_d_guard_integration_servers   sigma_cloud_d_guard_integration_servers @relation(fields: [sigma_cloud_d_guard_integration_server_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sigma_cloud_d_guard_integration_layouts_ibfk_1")
 
-  @@unique([guid, sigma_cloud_d_guard_integration_servers_id], map: "unique_guid_sigma_cloud_d_guard_integration_servers_id")
+  @@unique([guid, sigma_cloud_d_guard_integration_server_id], map: "unique_guid_sigma_cloud_d_guard_integration_server_id")
   @@index([created_at], map: "idx_created_at")
   @@index([guid], map: "idx_guid")
-  @@index([sigma_cloud_d_guard_integration_servers_id], map: "idx_sigma_cloud_d_guard_integration_servers_id")
   @@index([updated_at], map: "idx_updated_at")
+  @@index([sigma_cloud_d_guard_integration_server_id], map: "idx_sigma_cloud_d_guard_integration_server_id")
 }
 
 model sigma_cloud_d_guard_integration_servers {
@@ -440,16 +441,38 @@ model sigma_cloud_d_guard_integration_servers {
 }
 
 model sigma_cloud_d_guard_integration_workstations {
-  id                                         Int                                     @id @default(autoincrement())
-  guid                                       String                                  @db.VarChar(255)
-  sigma_cloud_d_guard_integration_servers_id Int
-  created_at                                 DateTime                                @default(now()) @db.DateTime(0)
-  updated_at                                 DateTime                                @default(now()) @db.DateTime(0)
-  sigma_cloud_d_guard_integration_servers    sigma_cloud_d_guard_integration_servers @relation(fields: [sigma_cloud_d_guard_integration_servers_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sigma_cloud_d_guard_integration_workstations_ibfk_1")
+  id                                        Int                                     @id @default(autoincrement())
+  guid                                      String                                  @db.VarChar(255)
+  sigma_cloud_d_guard_integration_server_id Int
+  created_at                                DateTime                                @default(now()) @db.DateTime(0)
+  updated_at                                DateTime                                @default(now()) @db.DateTime(0)
+  sigma_cloud_d_guard_integration_servers   sigma_cloud_d_guard_integration_servers @relation(fields: [sigma_cloud_d_guard_integration_server_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sigma_cloud_d_guard_integration_workstations_ibfk_1")
 
-  @@unique([guid, sigma_cloud_d_guard_integration_servers_id], map: "unique_guid_sigma_cloud_d_guard_integration_servers_id")
+  @@unique([guid, sigma_cloud_d_guard_integration_server_id], map: "unique_guid_sigma_cloud_d_guard_integration_server_id")
   @@index([created_at], map: "idx_created_at")
   @@index([guid], map: "idx_guid")
-  @@index([sigma_cloud_d_guard_integration_servers_id], map: "idx_sigma_cloud_d_guard_integration_servers_id")
+  @@index([updated_at], map: "idx_updated_at")
+  @@index([sigma_cloud_d_guard_integration_server_id], map: "idx_sigma_cloud_d_guard_integration_server_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model query_gateway_queries {
+  id                            Int       @id @default(autoincrement())
+  name                          String    @unique(map: "name") @db.VarChar(255)
+  group_name                    String?   @db.VarChar(255)
+  database_id                   Int
+  sql                           String    @db.LongText
+  variable_map                  Json?
+  replacement_map               Json?
+  is_query_gateway_query_active Boolean   @default(false)
+  created_at                    DateTime  @default(now()) @db.DateTime(0)
+  updated_at                    DateTime  @default(now()) @db.DateTime(0)
+  databases                     databases @relation(fields: [database_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "query_gateway_queries_ibfk_1")
+
+  @@index([created_at], map: "idx_created_at")
+  @@index([database_id], map: "idx_database_id")
+  @@index([group_name], map: "idx_group_name")
+  @@index([is_query_gateway_query_active], map: "idx_is_query_gateway_query_active")
+  @@index([name], map: "idx_name")
   @@index([updated_at], map: "idx_updated_at")
 }
