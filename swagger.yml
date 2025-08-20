@@ -188,7 +188,7 @@ components:
             - The key is the `name` of the query as stored in the system.
             - The value is either the result of the SQL execution from the connected database, or a structured error response if the query failed.
 
-            This structure enables clients to clearly see which APIs succeeded and which encountered issues, all in a single unified response.
+            This structure allows clients to identify which queries were executed successfully and which encountered errors, all in a single unified response.
       example:
         data:
           Get Weather:
@@ -386,9 +386,9 @@ paths:
                     message: "The authorization process encountered a technical issue."
                     suggestion: "Please try again later or contact support if the issue persists."
                 example_3:
-                  summary: The api data creation process encountered a technical issue
+                  summary: The query data creation process encountered a technical issue
                   value:
-                    message: "The api data creation process encountered a technical issue."
+                    message: "The query data creation process encountered a technical issue."
                     suggestion: "Please try again later or contact support if the issue persists."
   /api/v1/get/health:
     get:
