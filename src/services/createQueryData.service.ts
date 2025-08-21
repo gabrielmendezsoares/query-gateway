@@ -11,7 +11,39 @@ const REQUEST_TIMEOUT = 30_000;
 
 const prisma = new PrismaClient();
 
-const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[string, any]> => {
+const extractParameter = <T>(
+  reqBody: any, 
+  defaultValue: T | null,
+  parameterName: keyof query_gateway_queries, 
+  serviceName: string
+): T | undefined => {
+  if (!isObjectType(reqBody)) {
+    return defaultValue !== null 
+      ? defaultValue
+      : undefined;
+  }
+
+  const globalReplacementMapParameter = (reqBody as IReqBody.ICreateQueryDataReqBody).globalReplacementMap?.[parameterName];
+
+  if (globalReplacementMapParameter !== undefined) {
+    return globalReplacementMapParameter;
+  }
+
+  const localReplacementMapParameter = (reqBody as any)[serviceName][parameterName];
+
+  if (localReplacementMapParameter !== undefined) {
+    return localReplacementMapParameter;
+  }
+
+  return defaultValue !== null 
+    ? defaultValue
+    : undefined;
+};
+
+const processQuery = async (
+  queryGatewayQuery: query_gateway_queries,
+  reqBody: any
+): Promise<[string, any]> => {
   const {
     name,
     database_id,
@@ -20,10 +52,17 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
     replacement_map
   } = queryGatewayQuery;
 
+  const parameterMap = {
+    databaseId: extractParameter(reqBody, database_id, 'database_id', name),
+    sql: extractParameter(reqBody, sql, 'sql', name),
+    variableMap: extractParameter(reqBody, variable_map, 'variable_map', name),
+    replacementMap: extractParameter(reqBody, replacement_map, 'replacement_map', name)
+  };
+
   let sequelizeInstance: Sequelize | undefined;
 
   try {
-    const database = await prisma.databases.findUnique({ where: { id: database_id } });
+    const database = await prisma.databases.findUnique({ where: { id: parameterMap.databaseId as number } });
     
     if (!database) {
       return [
@@ -35,13 +74,13 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
       ];
     }
 
-    let querySql = sql
+    let querySql = parameterMap.sql as string
 
     switch (database.database_type) {
       case 'MySQL':
-        if (variable_map) {
+        if (parameterMap.variableMap) {
           const variableDeclaration = Object
-            .entries(variable_map)
+            .entries(parameterMap.variableMap)
             .reduce(
               (
                 accumulator: string, 
@@ -127,9 +166,9 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
         break;
 
       case 'SQL Server':
-        if (variable_map) {
+        if (parameterMap.variableMap) {
           const variableDeclaration = Object
-            .entries(variable_map)
+            .entries(parameterMap.variableMap)
             .reduce(
               (
                 accumulator: string, 
@@ -200,7 +239,7 @@ const processQuery = async (queryGatewayQuery: query_gateway_queries): Promise<[
         querySql, 
         { 
           type: QueryTypes.SELECT,
-          replacements: replacement_map as JsonObject | undefined ?? undefined,
+          replacements: parameterMap.replacementMap as JsonObject | undefined,
           transaction
         }
       );
@@ -237,17 +276,13 @@ export const createQueryData = async (req: Request): Promise<IResponse.IResponse
         ? Object.fromEntries(
             Object
               .entries(reqBodyFilterMap)
-              .map(
-                ([key, value]: [string, any]): [string, Record<string, any>] => {
-                  return [key, { [Array.isArray(value) ? 'in' : 'equals']: value }];
-                }
-              )
+              .map(([key, value]: [string, any]): [string, Record<string, any>] => [key, { [Array.isArray(value) ? 'in' : 'equals']: value }])
           ) 
         : undefined
     }
   );
   
-  const queryDataEntryList = await Promise.all(queryGatewayQueryList.map(processQuery));
+  const queryDataEntryList = await Promise.all(queryGatewayQueryList.map((queryGatewayQuery: query_gateway_queries): Promise<[string, any]> => processQuery(queryGatewayQuery, req.body)));
 
   return {
     status: 200,

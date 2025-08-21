@@ -452,7 +452,7 @@ CREATE TABLE `sigma_cloud_d_guard_integration_workstations` (
 
 CREATE TABLE `sigma_cloud_neppo_integration_satisfaction_surveys` (
     `id` INT NOT NULL AUTO_INCREMENT,
-    `sequential_id` VARCHAR(255) NOT NULL,
+    `sequential_id` INT UNSIGNED NOT NULL,
     `defect` VARCHAR(255) NOT NULL,
     `registered_phone` VARCHAR(255) NOT NULL,
     `normalized_phone` VARCHAR(255),
