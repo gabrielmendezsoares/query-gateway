@@ -218,8 +218,8 @@ components:
         data:
           Get Weather:
             data:
-              temperature: "25°C"
-              condition: "Cloudy"
+              - temperature: "25°C"
+                condition: "Cloudy"
           Get Users:
             message: "The query data creation process encountered a technical issue."
             suggestion: "Please try again later or contact support if the issue persists."
@@ -335,12 +335,9 @@ paths:
               example:
                 data:
                   Get Weather:
-                    data: [
-                      {
-                        temperature: "25°C",
+                    data:
+                      - temperature: "25°C"
                         condition: "Cloudy"
-                      }
-                    ]
                   Get Users:
                     message: "The query data creation process encountered a technical issue."
                     suggestion: "Please try again later or contact support if the issue persists."
