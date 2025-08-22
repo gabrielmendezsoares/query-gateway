@@ -54,6 +54,7 @@
     "remeda": "^2.30.0",
     "sequelize": "^6.37.7",
     "swagger-ui-express": "^5.0.1",
+    "tedious": "^18.6.1",
     "yamljs": "^0.3.0"
   },
   "devDependencies": {
@@ -72,6 +73,7 @@
     "@types/oracledb": "^6.9.1",
     "@types/sequelize": "^4.28.20",
     "@types/swagger-ui-express": "^4.1.8",
+    "@types/tedious": "^4.0.14",
     "@types/winston": "^2.4.4",
     "@types/yamljs": "^0.2.34",
     "globals": "^16.0.0",
