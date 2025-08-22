@@ -29,7 +29,7 @@ const extractParameter = <T>(
     return globalReplacementMapParameter;
   }
 
-  const localReplacementMapParameter = (reqBody as any)[serviceName][parameterName];
+  const localReplacementMapParameter = (reqBody as any)[serviceName]?.[parameterName];
 
   if (localReplacementMapParameter !== undefined) {
     return localReplacementMapParameter;
