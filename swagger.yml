@@ -114,6 +114,30 @@ components:
               format: int64
               description: Token expiration time in milliseconds.
               example: 1726080123123
+    ICreateQueryDataResponseData:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+          description: |
+            A key-value mapping of query names to their corresponding response results.
+
+            - The key is the `name` of the query as stored in the system.
+            - The value is either the result of the SQL execution from the connected database, or a structured error response if the query failed.
+
+            This structure allows clients to identify which queries were executed successfully and which encountered errors, all in a single unified response.
+      example:
+        data:
+          Get Weather:
+            data:
+              - temperature: "25°C"
+                condition: "Cloudy"
+          Get Users:
+            message: "The query data creation process encountered a technical issue."
+            suggestion: "Please try again later or contact support if the issue persists."
     IGetHealthResponseData:
       type: object
       required:
@@ -199,30 +223,6 @@ components:
                   type: boolean
                   description: If monitor should listen for modification events.
                   example: true
-    ICreateQueryDataResponseData:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: object
-          additionalProperties: true
-          description: |
-            A key-value mapping of query names to their corresponding response results.
-
-            - The key is the `name` of the query as stored in the system.
-            - The value is either the result of the SQL execution from the connected database, or a structured error response if the query failed.
-
-            This structure allows clients to identify which queries were executed successfully and which encountered errors, all in a single unified response.
-      example:
-        data:
-          Get Weather:
-            data:
-              - temperature: "25°C"
-                condition: "Cloudy"
-          Get Users:
-            message: "The query data creation process encountered a technical issue."
-            suggestion: "Please try again later or contact support if the issue persists."
 tags:
   - name: Application
     description: Core system operations including authentication, health monitoring, and system management
